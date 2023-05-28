@@ -1,0 +1,64 @@
+version: '2.0'
+
+services:
+  postgres:
+    image: postgis/postgis:14-3.3
+    restart: always
+    # env_file: ./marhaba-api/.env/
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_DB: "marhaba_db"
+      POSTGRES_PASSWORD: 1234
+
+    ports:
+        - "5432:5432"  
+    volumes:
+      - ./docker/postgres/.db:/var/lib/postgresql/data
+
+    profiles:
+      - backend
+
+  adminer:
+    image: adminer
+    ports:
+      - 8081:8080
+    networks:
+      - default
+    profiles:
+      - backend
+
+  laravel:
+    build:
+      context: .
+      dockerfile: ./marhaba-api/Dockerfile
+      args:
+        MOUNT_PATH: ./marhaba-api/composer.json
+    restart: always
+    tty: true
+    ports: 
+      - 8000:8000
+    container_name: laravel-develop-app
+    volumes:
+      - ./marhaba-api:/var/www/html/marhaba-api
+    depends_on:
+      - postgres
+    profiles:
+      - backend
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    ports:
+      - 6379:6379
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    entrypoint: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+    - ./redis/data:/data
+    # - /redis-conf:/usr/local/etc/redis/redis.conf
+    # - /etc/timezone:/etc/timezone:ro
+    # - /etc/localtime:/etc/localtime:ro 
+    profiles:
+      - backend
+
